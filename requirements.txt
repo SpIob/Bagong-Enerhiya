@@ -3,4 +3,6 @@ uvicorn
 streamlit
 requests
 transformers
+torch
 sqlalchemy
+pandas

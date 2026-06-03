@@ -1,2 +1,5 @@
 #Virtual Environment
 venv/
+
+#API Keys
+apis.txt
