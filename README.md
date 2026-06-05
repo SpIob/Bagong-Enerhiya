@@ -1,176 +1,247 @@
 # ⚗️ Bagong Enerhiya
 
-> **AI-powered literature intelligence for Philippine natural resource-based energy materials**
+> **AI-assisted literature intelligence for Philippine macroalgae supercapacitor materials research**
 
-Bagong Enerhiya is an open-source, AI-assisted literature intelligence tool that curates, organizes, and surfaces insights from existing scientific literature on Philippine-derived energy materials — giving Filipino researchers a focused starting point for computational chemistry and renewable energy materials discovery.
+Bagong Enerhiya is an open-source research tool that ingests scientific literature, extracts structured material properties using a domain-adapted NLP pipeline, and surfaces the result through an interactive web interface — built to document and quantify a specific research gap: **zero published studies exist on *Eucheuma cottonii* or *Kappaphycus alvarezii* as supercapacitor electrode materials**, despite the Philippines being the world's foremost producer of both species.
 
----
-
-## 🔬 Anchor Research Question
-
-> *Which Philippine seaweed (macroalgae) shows promise as a supercapacitor electrode material, and what properties make it viable or limiting?*
-
-The project focuses on *Eucheuma cottonii* and *Kappaphycus alvarezii* — the Philippines is the world's top producer of both species — and investigates their potential as biochar-derived supercapacitor electrode materials. Fewer than 50 papers globally cover seaweed biochar for electrochemical devices, and **zero** are Philippines-specific, making this a high-novelty research gap.
+Built in four weeks as a solo student project. Zero budget. Fully reproducible.
 
 ---
 
-## 🚀 Features
+## The Research Gap
 
-- **Literature ingestion pipeline** — fetches papers from Semantic Scholar, CrossRef, and arXiv APIs
-- **AI-assisted extraction** — uses SciBERT / MatSciBERT (HuggingFace Transformers) for named entity recognition of material properties (BET surface area, specific capacitance, heteroatom doping, cycling stability, etc.)
-- **SQLite database** — stores and indexes literature metadata and extracted properties
-- **FastAPI backend** — exposes data processing endpoints for the frontend
-- **Streamlit dashboard** — interactive search, filter, annotation, extracted property tables, and performance plots
+The Philippines produces over 1.5 million metric tons of macroalgae annually — primarily *Eucheuma cottonii* and *Kappaphycus alvarezii* for carrageenan extraction. The post-extraction solid residue is discarded as waste.
+
+Related seaweed species (Sargassum, Ulva, Gracilaria) have yielded supercapacitor electrodes with specific capacitances of **45.9–354 F/g**. Philippine commercial species: **0 papers**.
+
+Bagong Enerhiya makes this gap programmatically visible and provides the supporting literature context needed to design the first experimental investigation.
 
 ---
 
-## 🛠️ Technical Stack
+## What It Does
 
-| Component | Tool / Library | Purpose |
+```
+Semantic Scholar API ─┐
+CrossRef API          ├──► ingest ──► SQLite DB ──► FastAPI ──► Streamlit UI
+arXiv API             ┘               (papers,       3 REST    3 views:
+                                       properties)   endpoints  Browser · Detail · Compare
+```
+
+**Literature ingestion** — fetches and deduplicates papers by DOI from CrossRef and by keyword from Semantic Scholar. Handles HTML entity decoding, tier classification (core / supporting / tangential), and schema auto-initialisation on first run.
+
+**Property extraction** — a hybrid MatSciBERT + regex pipeline extracts four entity types from paper abstracts: specific capacitance (F/g), BET surface area (m²/g), pyrolysis temperature (°C), and activating agent. Confidence scores and test conditions are stored alongside each extracted value.
+
+**FastAPI backend** — three endpoints expose the corpus as a public API: `GET /papers`, `GET /papers/{id}`, `GET /properties`. Full filtering, pagination, and Swagger docs at `/docs`.
+
+**Streamlit interface** — Paper Browser (search + filter), Paper Detail (abstract + properties table), and Properties Comparison (ranked bar chart + cross-paper table with research gap callout).
+
+---
+
+## Corpus
+
+| Stat | Value |
+|---|---|
+| Total papers | 62 |
+| Core (seaweed electrode) | 25 |
+| Supporting | 30 |
+| Tangential | 7 |
+| Year range | 2009–2026 |
+| Open access | 18 (29%) |
+| Philippine-species electrode papers | **0** |
+
+Capacitance range across core seaweed papers: **45.9–354 F/g** (Gracilaria spinulosa → Sargassum Wightii).
+
+---
+
+## NLP Pipeline
+
+MatSciBERT (`m3rg-iitd/matscibert`) was selected over SciBERT after empirical comparison on three anchor paper abstracts. MatSciBERT wins on span coherence (groups numeric value + unit together), activating agent recall, and pyrolysis temperature grouping. BET surface area uses regex-primary extraction due to model weakness on that entity type.
+
+| Property | Method | Unit | Confidence |
+|---|---|---|---|
+| `specific_capacitance` | Regex | F/g | 0.80 |
+| `BET_surface_area` | Regex | m²/g | 0.80 |
+| `pyrolysis_temp` | Regex + context window | °C | 0.75 |
+| `activating_agent` | Keyword lookup | — | 0.90 |
+
+---
+
+## Tech Stack
+
+| Layer | Tool | Notes |
 |---|---|---|
-| Frontend | Streamlit | Interactive user interface |
-| Backend API | FastAPI + Uvicorn | Data processing and logic |
-| Database | SQLite (local) → Turso (cloud, optional) | Store literature metadata and extracted properties |
-| NLP / AI | HuggingFace Transformers (SciBERT / MatSciBERT) | Abstract parsing, entity extraction, summarization |
-| Literature API | Semantic Scholar API | Fetch papers from academic databases |
-| Supplementary APIs | CrossRef API, arXiv API | Metadata and preprint access |
-| Hosting | HuggingFace Spaces or Railway | Deploy the application |
-| Version Control | GitHub | Code and project tracking |
+| Frontend | Streamlit | Foundry dark theme — `#121212` / `#ff4d00` / JetBrains Mono |
+| Backend | FastAPI + Uvicorn | 3 endpoints, CORS-enabled, Swagger at `/docs` |
+| Database | SQLite | `db/bagong_enerhiya.db` — `papers` + `properties` tables |
+| NLP | MatSciBERT (HuggingFace) | Zero-shot token classification, CPU inference |
+| Literature | Semantic Scholar API | Key required — 100 req/5 min |
+| Metadata | CrossRef API | No key — unlimited |
+| Version control | GitHub | This repo |
 
 ---
 
-## 📦 Installation
+## Installation
 
 ### Prerequisites
 
 - Python 3.10+
-- `pip` or `conda`
-- A Semantic Scholar API key ([api.semanticscholar.org](https://api.semanticscholar.org))
-- A HuggingFace access token ([huggingface.co](https://huggingface.co)) *(for gated models, if needed)*
+- A Semantic Scholar API key → [api.semanticscholar.org](https://api.semanticscholar.org)
 
 ### Setup
 
-1. **Clone the repository**
+```bash
+# 1. Clone
+git clone https://github.com/SpIob/Bagong-Enerhiya.git
+cd Bagong-Enerhiya
 
-   ```bash
-   git clone https://github.com/<your-username>/bagong-enerhiya.git
-   cd bagong-enerhiya
-   ```
+# 2. Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate          # Windows: venv\Scripts\activate
 
-2. **Create and activate a virtual environment**
+# 3. Install dependencies
+pip install -r requirements.txt
 
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
+# 4. Add your Semantic Scholar API key
+echo "semantic_scholar=your_key_here" > apis.txt
+# apis.txt is .gitignored — never committed
+```
 
-3. **Install dependencies**
+### Initialise the database
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+python3 -c "
+import sqlite3, pathlib
+conn = sqlite3.connect('db/bagong_enerhiya.db')
+conn.executescript(pathlib.Path('db/schema.sql').read_text())
+conn.close()
+print('Database initialised.')
+"
+```
 
-4. **Set environment variables**
+### Build the corpus
 
-   Create a `.env` file in the project root:
+```bash
+# Seed from the 14 hand-curated papers (CrossRef)
+python ingest/fetch_papers.py --insert
 
-   ```env
-   SEMANTIC_SCHOLAR_API_KEY=your_key_here
-   HUGGINGFACE_TOKEN=your_token_here
-   ```
+# Expand via Semantic Scholar keyword search
+python ingest/search_papers.py --insert
 
-5. **Run the backend**
+# Extract material properties from all abstracts
+python pipeline/extract.py --insert
+```
 
-   ```bash
-   uvicorn app.main:app --reload
-   ```
+### Run
 
-6. **Run the frontend**
+Open two terminals from the project root:
 
-   ```bash
-   streamlit run frontend/app.py
-   ```
+```bash
+# Terminal 1 — FastAPI backend
+uvicorn api.main:app --reload --port 8000
+
+# Terminal 2 — Streamlit frontend
+streamlit run app/streamlit_app.py
+```
+
+Open `http://localhost:8501` in your browser.
+API docs at `http://localhost:8000/docs`.
 
 ---
 
-## 🗂️ Project Structure
+## Project Structure
 
 ```
-bagong-enerhiya/
+Bagong Enerhiya/
+├── .streamlit/
+│   └── config.toml          # Foundry dark theme
+├── api/
+│   └── main.py              # FastAPI — GET /papers, /papers/{id}, /properties
 ├── app/
-│   ├── main.py            # FastAPI app entry point
-│   ├── routes/            # API route definitions
-│   ├── models/            # SQLAlchemy database models
-│   └── pipeline/          # Literature ingestion and NLP pipeline
-├── frontend/
-│   └── app.py             # Streamlit dashboard
-├── data/
-│   └── literature.db      # SQLite database (auto-generated)
+│   └── streamlit_app.py     # Streamlit — Paper Browser, Detail, Properties
+├── db/
+│   ├── schema.sql           # papers + properties tables, indexes, constraints
+│   └── bagong_enerhiya.db   # SQLite corpus database (auto-generated)
+├── ingest/
+│   ├── fetch_papers.py      # Seed corpus from CrossRef by DOI
+│   ├── search_papers.py     # Expand corpus via Semantic Scholar keywords
+│   └── clean_titles.py      # Strip HTML tags from CrossRef title data
+├── pipeline/
+│   ├── compare_models.py    # SciBERT vs MatSciBERT evaluation script
+│   └── extract.py           # MatSciBERT + regex property extraction
+├── writeup/
+│   └── paper.md             # Technical write-up (full paper draft)
+├── apis.txt                 # API keys — NOT committed (.gitignored)
 ├── requirements.txt
-├── .env.example
 └── README.md
 ```
 
 ---
 
-## 📅 4-Week Roadmap
+## API Reference
 
-| Week | Phase | Key Tasks |
-|---|---|---|
-| 1 | **Scope & Data** | Define search queries and inclusion criteria; source papers via APIs; set up GitHub repo and Python environment |
-| 2 | **Pipeline** | Build literature ingestion pipeline; extract material properties using open LLM APIs; design and populate SQLite schema |
-| 3 | **Interface** | Build Streamlit UI; connect FastAPI backend; integrate entity extraction; display interactive tables and plots |
-| 4 | **Write-up & Polish** | Verify extraction accuracy on test papers; write README and user guide; draft technical write-up; record demo; publish repo |
+The FastAPI backend is also a public data API. All endpoints return paginated JSON.
 
----
+### `GET /papers`
+```
+?tier=core|supporting|tangential
+&year_from=2009
+&year_to=2026
+&open_access=true|false
+&keyword=sargassum
+&limit=50
+&offset=0
+```
 
-## 🧪 NLP Extraction Targets
+### `GET /papers/{id}`
+Returns full paper metadata including all extracted properties.
 
-Properties targeted for extraction from paper abstracts:
+### `GET /properties`
+```
+?property_type=specific_capacitance|BET_surface_area|pyrolysis_temp|activating_agent
+&tier=core
+&min_confidence=0.7
+&extraction_method=manual|nlp|llm
+&limit=100
+```
 
-- Porosity and specific surface area (BET)
-- Heteroatom doping (N, O)
-- Carbon yield after pyrolysis/activation
-- Electrochemical capacitance (CV, GCD)
-- Cycling stability
-- Conductivity
-- Synthesis temperature and activating agent
-- Energy and power density
-
-**First-iteration performance targets:** Precision ≥ 0.70 · Recall ≥ 0.60 · F1 ≥ 0.65
-
----
-
-## 📚 Literature APIs
-
-| API | Access | Free Tier |
-|---|---|---|
-| Semantic Scholar | API key required | 100 req / 5 min |
-| CrossRef | No key needed | Unlimited |
-| arXiv | No key needed | Unlimited |
-| HuggingFace Models Hub | Access token | Free for inference |
-| Materials Project | API key required | Free |
+Interactive docs: `http://localhost:8000/docs`
 
 ---
 
-## ❓ Open Questions
+## Roadmap
 
-- Which pre-trained model performs best for extracting electrochemical properties from materials science abstracts — SciBERT, MatSciBERT, or a general-purpose LLM like Mistral 7B?
-- How should papers behind paywalls be handled — rely on open-access preprints only, or include metadata without full text?
-- Is there an existing open dataset of seaweed carbon properties (not PH-specific) that can bootstrap the initial corpus?
-- Can synthesis conditions be extracted reliably from abstracts, or does this require full-text access?
-- What is the best way to normalize performance comparisons across studies using different testing conditions?
-- Should a manual annotation correction step be built in, and how will extraction accuracy be measured?
-- What open-source license (MIT or Apache 2.0) is most appropriate?
-
----
-
-## 📄 License
-
-This project is a student initiative. License TBD (MIT or Apache 2.0 — see Open Questions above).
+- [x] Week 1 — Corpus scoping, inclusion criteria, GitHub setup
+- [x] Week 2 — Ingestion pipeline, SQLite schema, MatSciBERT extraction
+- [x] Week 3 — FastAPI backend, Streamlit UI, end-to-end demo
+- [x] Week 4 — Write-up, README, final commit
+- [ ] Fine-tune MatSciBERT on hand-annotated seaweed electrode abstracts
+- [ ] Add cycling stability and heteroatom content extraction
+- [ ] First experimental synthesis of *K. alvarezii*-derived activated carbon
+- [ ] Expand to other Philippine resources (nickel laterite, coconut shell, bamboo)
 
 ---
 
-## 🙏 Acknowledgements
+## Contributing
 
-This project is part of ongoing research into renewable energy materials from Philippine natural resources, with a focus on the untapped electrochemical potential of locally farmed macroalgae species (*Eucheuma cottonii* and *Kappaphycus alvarezii*).
+Contributions are welcome, especially:
+- Hand-annotated property corrections (add `extraction_method = 'manual'` rows)
+- New paper additions to the corpus via pull request
+- Extraction pipeline improvements for BET surface area precision
+
+Please open an issue before submitting a pull request for significant changes.
+
+---
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+## Author
+
+**Jan Mico M. Arenga**
+Incoming BS AI Engineering Student, Mapúa University, Manila, Philippines
+[GitHub](https://github.com/SpIob)
+
+*Bagong Enerhiya* (Filipino: "New Energy") is an independent student research initiative exploring the untapped electrochemical potential of Philippine-farmed macroalgae — and the infrastructure needed to find it.

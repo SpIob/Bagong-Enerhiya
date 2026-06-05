@@ -3,3 +3,6 @@ venv/
 
 #API Keys
 apis.txt
+
+#Database
+db/bagong_enerhiya.db

@@ -5,4 +5,4 @@ requests
 transformers
 torch
 sqlalchemy
-pandas
+pandasuvicorn
