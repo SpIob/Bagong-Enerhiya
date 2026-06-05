@@ -208,7 +208,7 @@ Interactive docs: `http://localhost:8000/docs`
 
 ---
 
-## Roadmap
+## Initial Roadmap
 
 - [x] Week 1 — Corpus scoping, inclusion criteria, GitHub setup
 - [x] Week 2 — Ingestion pipeline, SQLite schema, MatSciBERT extraction
