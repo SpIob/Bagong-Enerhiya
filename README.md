@@ -1,5 +1,7 @@
 # ⚗️ Bagong Enerhiya
 
+![Project demo](./assets/demo.gif)
+
 > **AI-assisted literature intelligence for Philippine macroalgae supercapacitor materials research**
 
 Bagong Enerhiya is an open-source research tool that ingests scientific literature, extracts structured material properties using a domain-adapted NLP pipeline, and surfaces the result through an interactive web interface — built to document and quantify a specific research gap: **zero published studies exist on *Eucheuma cottonii* or *Kappaphycus alvarezii* as supercapacitor electrode materials**, despite the Philippines being the world's foremost producer of both species.
